@@ -1,84 +1,42 @@
 #!/bin/sh
 
-set -oue pipefail
-
-help() {
-    cat <<EOF
-Usage: $(basename "$0") <command> [args...]
-
-Commands:
-  install <src_dir> <dest_dir>   Install using the bootstrap.sh build system.
-
-See https://github.com/adelynnmckay/bootstrap.sh for more information.
-EOF
-}
-
-install() {
-    src_dir=$1
-    dest_dir=$2
-
-    if [ -z "$src_dir" ] || [ -z "$dest_dir" ]; then
-        echo "Error: 'install' requires two arguments: <src_dir> <dest_dir>" >&2
-        help
-        exit 1
-    fi
-
-    if [ ! -d "$src_dir" ]; then
-        echo "Error: Source directory does not exist: $src_dir" >&2
-        exit 1
-    fi
-
-    mkdir -p "$dest_dir" || {
-        echo "Error: Failed to create directory: $dest_dir" >&2
-        exit 1
-    }
-
-    # Remove broken symlinks in dest_dir
-    for file in "$dest_dir"/*; do
-        if [ -L "$file" ] && [ ! -e "$file" ]; then
-            rm -f "$file"
-        fi
-    done
-
-    # Create symlinks for all files in src_dir
-    for src_file in "$src_dir"/*; do
-        if [ -f "$src_file" ]; then
-            base_name=$(basename "$src_file")
-            ln -sf "$(pwd)/$src_file" "$dest_dir/$base_name"
-        fi
-    done
-
-    echo "Installed symlinks from $src_dir to $dest_dir"
-}
+set -oue
 
 main() {
-    trap 'echo "Error: An error occurred."; help; exit 1' ERR
+    # Check if running in Homebrew install context
+    if [ -z "${HOMEBREW_FORMULA_PREFIX:-}" ]; then
+        # Not running during Homebrew install
 
-    if [ "$#" -lt 1 ]; then
-        echo "Error: No command provided." >&2
-        help
-        exit 1
-    fi
+        # Install Homebrew if not present
+        if ! command -v brew >/dev/null 2>&1; then
+            echo "Homebrew not found. Installing Homebrew..."
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+            eval "$(/opt/homebrew/bin/brew shellenv)" 2>/dev/null || \
+            eval "$(/usr/local/bin/brew shellenv)"
+        fi
 
-    case "$1" in
-        install)
-            if [ "$#" -ne 3 ]; then
-                echo "Error: 'install' requires exactly two arguments: <src_dir> <dest_dir>" >&2
-                help
-                exit 1
-            fi
-            install "$2" "$3"
-            ;;
-        -h|--help)
-            help
-            exit 0
-            ;;
-        *)
-            echo "Error: Unknown command: $1" >&2
-            help
+        # Tap adelynnmckay/tap if not already tapped
+        if ! brew tap | grep -q '^adelynnmckay/tap$'; then
+            echo "Tapping adelynnmckay/tap..."
+            brew tap adelynnmckay/tap
+        fi
+
+        # Install bootstrap.sh if not already installed
+        if ! brew list --formula | grep -q '^bootstrap.sh$'; then
+            echo "Installing bootstrap.sh..."
+            brew install adelynnmckay/tap/bootstrap.sh
+        fi
+
+        # Build current formula from source
+        formula_file="./Formula/$(basename "$(pwd)").rb"
+        if [ -f "$formula_file" ]; then
+            echo "Installing formula from $formula_file..."
+            brew install --build-from-source "$formula_file"
+        else
+            echo "Error: Formula file not found: $formula_file" >&2
             exit 1
-            ;;
-    esac
+        fi
+    fi
 }
 
-main "$@"
+main

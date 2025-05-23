@@ -1,7 +1,7 @@
-class Bootstrap < Formula
+class BootstrapSh < Formula
   desc "ade's bootstrap script. aka the bootrap.sh build system. have fun."
-  homepage "https://github.com/adelynnmckay/bootstrap"
-  url "https://github.com/adelynnmckay/bootstrap/archive/refs/tags/v1.0.0.tar.gz"
+  homepage ""
+  url ""
   sha256 ""
   license "MIT"
 
