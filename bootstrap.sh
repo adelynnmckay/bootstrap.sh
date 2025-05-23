@@ -3,6 +3,7 @@
 set -oue
 
 main() {
+
     # Check if running in Homebrew install context
     if [ -z "${HOMEBREW_FORMULA_PREFIX:-}" ]; then
         # Not running during Homebrew install
@@ -37,6 +38,7 @@ main() {
             exit 1
         fi
     fi
+
 }
 
 main
