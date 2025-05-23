@@ -4,6 +4,7 @@ class BootstrapSh < Formula
   url ""
   sha256 ""
   license "MIT"
+  version ""
 
   def install
     bin.install "bootstrap.sh" => "bootstrap.sh"
